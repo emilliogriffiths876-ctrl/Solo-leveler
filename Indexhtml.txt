@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Solo Fitness System</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #111; color: #fff; }
+    input, button { margin: 5px; padding: 8px; }
+    li { margin: 10px 0; }
+
+    .bar {
+      width: 100%;
+      background: #333;
+      height: 20px;
+      border-radius: 10px;
+      margin: 10px 0;
+    }
+
+    .fill {
+      height: 100%;
+      background: lime;
+      width: 0%;
+      border-radius: 10px;
+    }
+
+    .card {
+      background: #1c1c1c;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>⚔️ SOLO FITNESS SYSTEM</h1>
+
+<div class="card">
+  <h3>Level: <span id="level">1</span></h3>
+  <h3>Rank: <span id="rank">Beginner</span></h3>
+  <div class="bar"><div id="xpBar" class="fill"></div></div>
+  <p>XP: <span id="xp">0</span>/<span id="xpNeed">50</span></p>
+</div>
+
+<div class="card">
+  <h3>🧍 Stats</h3>
+  <p>Strength: <span id="str">1</span></p>
+  <p>Endurance: <span id="end">1</span></p>
+  <p>Speed: <span id="spd">1</span></p>
+</div>
+
+<div class="card">
+  <h3>🎯 Daily Mission</h3>
+  <p id="missionText"></p>
+  <button onclick="completeMission()">Complete Mission</button>
+</div>
+
+<div class="card">
+  <h3>⚔️ Quests</h3>
+  <input id="workout" placeholder="Workout">
+  <input id="goal" type="number" placeholder="Goal">
+  <button onclick="addWorkout()">Add Quest</button>
+  <ul id="list"></ul>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem("soloFitness")) || {
+  workouts: [],
+  xp: 0,
+  level: 1,
+  str: 1,
+  end: 1,
+  spd: 1,
+  mission: null
+};
+
+const ranks = ["Beginner","E","D","C","B","A","S","Shadow Monarch"];
+
+function save() {
+  localStorage.setItem("soloFitness", JSON.stringify(data));
+}
+
+function xpNeeded() {
+  return data.level * 50;
+}
+
+function updateRank() {
+  let index = Math.min(Math.floor(data.level / 5), ranks.length - 1);
+  return ranks[index];
+}
+
+function generateMission() {
+  let types = ["Push-ups","Running","Squats"];
+  let random = types[Math.floor(Math.random() * types.length)];
+  let amount = Math.floor(Math.random() * 20) + 10;
+
+  data.mission = {
+    text: `Do ${amount} ${random}`,
+    reward: amount * 3,
+    done: false
+  };
+}
+
+function completeMission() {
+  if (data.mission && !data.mission.done) {
+    data.xp += data.mission.reward;
+    data.mission.done = true;
+    alert("🔥 Mission Complete! +" + data.mission.reward + " XP");
+    updateLevel();
+    save();
+    render();
+  }
+}
+
+function updateLevel() {
+  while (data.xp >= xpNeeded()) {
+    data.xp -= xpNeeded();
+    data.level++;
+
+    data.str++;
+    data.end++;
+    data.spd++;
+
+    alert("⚡ LEVEL UP! Stats increased!");
+  }
+}
+
+function render() {
+  document.getElementById("level").innerText = data.level;
+  document.getElementById("xp").innerText = data.xp;
+  document.getElementById("xpNeed").innerText = xpNeeded();
+  document.getElementById("rank").innerText = updateRank();
+
+  document.getElementById("str").innerText = data.str;
+  document.getElementById("end").innerText = data.end;
+  document.getElementById("spd").innerText = data.spd;
+
+  let percent = (data.xp / xpNeeded()) * 100;
+  document.getElementById("xpBar").style.width = percent + "%";
+
+  if (!data.mission) generateMission();
+  document.getElementById("missionText").innerText = data.mission.text;
+
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  data.workouts.forEach((w, index) => {
+    let li = document.createElement("li");
+    li.innerHTML = `
+      ${w.name} (${w.done}/${w.goal})
+      <button onclick="addProgress(${index})">+1</button>
+      <button onclick="completeWorkout(${index})">✅</button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function addWorkout() {
+  let name = document.getElementById("workout").value;
+  let goal = document.getElementById("goal").value;
+
+  if (!name || !goal) return;
+
+  data.workouts.push({ name, goal, done: 0 });
+  save();
+  render();
+}
+
+function addProgress(index) {
+  data.workouts[index].done++;
+  save();
+  render();
+}
+
+function completeWorkout(index) {
+  let w = data.workouts[index];
+
+  if (w.done >= w.goal) {
+    let reward = w.goal * 2;
+    data.xp += reward;
+
+    alert("💥 Quest Complete! +" + reward + " XP");
+
+    data.workouts.splice(index, 1);
+    updateLevel();
+    save();
+    render();
+  }
+}
+
+render();
+</script>
+
+</body>
+</html>
